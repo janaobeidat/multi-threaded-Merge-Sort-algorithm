@@ -1,0 +1,151 @@
+#include <iostream>
+#include <thread>
+#include <string>
+#include <fstream>
+#include <cmath>
+#include <cstdlib>
+#include <mutex>
+using namespace std;
+int aboveth=0 , equalth=0 ,belowth =0;
+  mutex x,y,z;
+
+ void Merge(int A[], int l, int m, int r)
+{
+	int n1 = m - l + 1;
+	int n2 = r - m;
+	int L[n1], R[n2];
+for (int i = 0; i < n1; i++)
+	L[i] = A[l + i];
+for (int j = 0; j < n2; j++)
+	R[j] = A[m + 1 + j];
+	int i = 0;
+	int j = 0;
+	int k = l;
+while (i < n1 && j < n2) {
+if (L[i] <= R[j]) {
+	A[k] = L[i];
+	i++;}
+else {
+	A[k] = R[j];
+	j++;}
+	k++;}
+while (i < n1) {
+	A[k] = L[i];
+	i++;
+	k++;}
+while (j < n2) {
+	A[k] = R[j];
+	j++;
+	k++;}
+} // end merge 
+void MergeSort(int A[],int left,int right) {
+    	int mid;
+if (left < right) {
+		mid = floor((left + right) / 2);
+		MergeSort(A, left, mid);
+		MergeSort(A, mid+1, right);
+		Merge(A, left, mid, right);
+	}
+}
+ void fun1 (int id){	
+ cout<<"Starting thread "<<id<<": no work to do. "<<endl;
+ }
+ void creation (int array[],int low,int high,int th,int id){
+     cout<<"Starting thread "<<id<<": low = "<<low<<", high="<<high<<endl;
+ 	int num_elem=high-low+1;
+for(int i=0;i<num_elem;i++)
+{if (array[low+i]<th)
+{ 	x.lock();
+ 	belowth++;
+ 	x.unlock();}
+else if(array[low+i]==th) {
+	y.lock();
+	equalth++;
+    y.unlock();       }
+
+else{
+	z.lock();
+ 	aboveth++;
+ 	z.unlock();
+ }
+}//for statment
+if(low!=high)
+MergeSort(array, low, high);
+ }//creation
+ 
+ struct threadstr{
+        int id,low,high;
+    };
+int main(int argc , char* argv[]){
+     if(argc!=2){
+	cerr<<"Usage; user should enter the number of threads"<<endl;
+	return 1;}
+ 	int t = atoi(argv[1]);
+     	int n,th,low,high;
+    	ifstream inFile("in.txt");
+    	ofstream outFile("out.txt");
+    if (!inFile || !outFile) {
+        	cerr << "Error opening files." << endl;
+        return 1;
+    }
+    inFile>> n>>th ;
+   	 int s;
+    if(t<n)s=t;
+    else s=n; 
+    if(t<=0){ 	cout<<"This number is not allowed as the number of threads "<<endl;
+         return 0; }
+else 
+	 if(n%t!=0&&n>t){ 	cout<<"The number of array elements is not devisable by the number of threads "<<endl;
+        return 0; }
+        
+   	 cout<<"Main: Starting sorting with N="<<n<<", TH="<<th<<endl;
+   	 int* bigarr =new int[n] ,d=0;
+    for (int i=0;i<n;i++)
+        	{inFile>>bigarr[i];}
+        	
+		threadstr *strarr=new threadstr[t];
+		thread *threads=new thread[t];
+	
+	if(t>n){
+            for(int i=0;i<n;i++)
+            {	low=high=i;
+            	threads[i]= thread(creation,bigarr,low,high,th,i);
+             	strarr[i].id=i; strarr[i].low=low;strarr[i].high=high;
+            }
+        for(int i=n;i<t ;i++)
+        {	threads[i]= thread(fun1,i);}
+         for(int i=0;i<t;i++){   threads[i].join();}
+    }
+
+else
+	 if(n%t==0)
+    {  	 d=n/t;
+        for(int i=0;i<t;i++)
+        {	low=d*i;high=(d*i)+(d-1);
+        	strarr[i].id=i; strarr[i].low=low;strarr[i].high=high;
+       		threads[i]= thread(creation,bigarr,low,high,th,i);
+        }
+        for(int i=0;i<t;i++){
+            threads[i].join();}
+    }
+    
+    cout<<"Main: Above Threshold = "<<aboveth<<endl;
+    cout<<"Main: Equals Threshold = "<<equalth<<endl;
+    cout<<"Main: Below Threshold = "<<belowth<<endl;
+    
+     for(int i=0;i<s-1;i++){// merge (a , 0, h[i] , h[i+1])
+         Merge (bigarr,0,strarr[i].high,strarr[i+1].high);
+     }
+     outFile<<"Sorted array:"<<endl;
+     
+     for(int i=0;i<n;i++)
+     outFile<<bigarr[i]<<" ";
+   	outFile<<endl;
+
+	delete [] bigarr;
+	delete [] strarr;
+	delete [] threads;
+
+	 return 0;
+
+}
